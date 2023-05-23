@@ -24,47 +24,43 @@ const (
 )
 
 type Operation struct {
-	schemaName           string
-	tableName            string
-	primaryKeyColumnName string
-	opType               OperationType
-	primaryKey           string
-	data                 map[string]string
+	schemaName string
+	tableName  string
+	opType     OperationType
+	primaryKey map[string]string
+	data       map[string]string
 }
 
 func (o *Operation) String() string {
 	return fmt.Sprintf("%s.%s/%s (%s)", o.schemaName, o.tableName, o.primaryKey, strings.ToLower(string(o.opType)))
 }
 
-func (l *Loader) newInsertOperation(tableName string, primaryKey string, data map[string]string) *Operation {
+func (l *Loader) newInsertOperation(tableName string, primaryKey map[string]string, data map[string]string) *Operation {
 	return &Operation{
-		schemaName:           l.schema,
-		tableName:            tableName,
-		opType:               OperationTypeInsert,
-		primaryKeyColumnName: l.tablePrimaryKeys[tableName],
-		primaryKey:           primaryKey,
-		data:                 data,
+		schemaName: l.schema,
+		tableName:  tableName,
+		opType:     OperationTypeInsert,
+		primaryKey: primaryKey,
+		data:       data,
 	}
 }
 
-func (l *Loader) newUpdateOperation(tableName string, primaryKey string, data map[string]string) *Operation {
+func (l *Loader) newUpdateOperation(tableName string, primaryKey map[string]string, data map[string]string) *Operation {
 	return &Operation{
-		schemaName:           l.schema,
-		tableName:            tableName,
-		opType:               OperationTypeUpdate,
-		primaryKeyColumnName: l.tablePrimaryKeys[tableName],
-		primaryKey:           primaryKey,
-		data:                 data,
+		schemaName: l.schema,
+		tableName:  tableName,
+		opType:     OperationTypeUpdate,
+		primaryKey: primaryKey,
+		data:       data,
 	}
 }
 
-func (l *Loader) newDeleteOperation(tableName string, primaryKey string) *Operation {
+func (l *Loader) newDeleteOperation(tableName string, primaryKey map[string]string) *Operation {
 	return &Operation{
-		schemaName:           l.schema,
-		tableName:            tableName,
-		opType:               OperationTypeDelete,
-		primaryKeyColumnName: l.tablePrimaryKeys[tableName],
-		primaryKey:           primaryKey,
+		schemaName: l.schema,
+		tableName:  tableName,
+		opType:     OperationTypeDelete,
+		primaryKey: primaryKey,
 	}
 }
 
@@ -105,26 +101,34 @@ func (o *Operation) query(typeGetter TypeGetter) (string, error) {
 		}
 
 		updatesString := strings.Join(updates, ", ")
-		return fmt.Sprintf("UPDATE %s.%s SET %s WHERE %s = %s",
+		primaryKeySelector := getPrimaryKeyWhereClause(o.primaryKey)
+		return fmt.Sprintf("UPDATE %s.%s SET %s WHERE %s",
 			escapeIdentifier(o.schemaName),
 			escapeIdentifier(o.tableName),
 			updatesString,
-			escapeIdentifier(o.primaryKeyColumnName),
-			escapeStringValue(o.primaryKey),
+			primaryKeySelector,
 		), nil
 
 	case OperationTypeDelete:
-		return fmt.Sprintf("DELETE FROM %s.%s WHERE %s = %s",
+		primaryKeyWhereClause := getPrimaryKeyWhereClause(o.primaryKey)
+		return fmt.Sprintf("DELETE FROM %s.%s WHERE %s",
 			escapeIdentifier(o.schemaName),
 			escapeIdentifier(o.tableName),
-			escapeIdentifier(o.primaryKeyColumnName),
-			escapeStringValue(o.primaryKey),
+			primaryKeyWhereClause,
 		), nil
 
 	default:
 		panic(fmt.Errorf("unknown operation type %q", o.opType))
 	}
 
+}
+
+func getPrimaryKeyWhereClause(primaryKey map[string]string) string {
+	reg := []string{}
+	for key, value := range primaryKey {
+		reg = append(reg, fmt.Sprintf("%s = %s", escapeIdentifier(key), escapeStringValue(value)))
+	}
+	return fmt.Sprint(strings.Join(reg[:], " AND "))
 }
 
 func prepareColValues(tableName string, colValues map[string]string, typeGetter TypeGetter) (columns []string, values []string, err error) {
@@ -161,9 +165,8 @@ var reflectTypeTime = reflect.TypeOf(time.Time{})
 // Format based on type, value returned unescaped
 func normalizeValueType(value string, valueType reflect.Type) (string, error) {
 	switch valueType.Kind() {
-	case reflect.String:
+	case reflect.String, reflect.Slice:
 		return escapeStringValue(value), nil
-
 	case reflect.Bool:
 		return fmt.Sprintf("'%s'", value), nil
 

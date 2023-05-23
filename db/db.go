@@ -22,12 +22,12 @@ type CursorError struct {
 type Loader struct {
 	*sql.DB
 
-	database           string
-	schema             string
-	entries            map[string]map[string]*Operation
-	entriesCount       uint64
-	tables             map[string]map[string]reflect.Type
-	tablePrimaryKeys   map[string]string
+	database         string
+	schema           string
+	entries          map[string]map[string]*Operation
+	entriesCount     uint64
+	tables           map[string]map[string]reflect.Type
+	tablePrimaryKeys map[string][]string
 	moduleMismatchMode OnModuleHashMismatch
 
 	flushInterval time.Duration
@@ -63,16 +63,16 @@ func NewLoader(
 	)
 
 	return &Loader{
-		DB:                 db,
-		database:           dsn.database,
-		schema:             dsn.schema,
-		entries:            map[string]map[string]*Operation{},
-		tables:             map[string]map[string]reflect.Type{},
-		tablePrimaryKeys:   map[string]string{},
-		flushInterval:      flushInterval,
+		DB:               db,
+		database:         dsn.database,
+		schema:           dsn.schema,
+		entries:          map[string]map[string]*Operation{},
+		tables:           map[string]map[string]reflect.Type{},
+		tablePrimaryKeys: map[string][]string{},
+		flushInterval:    flushInterval,
 		moduleMismatchMode: moduleMismatchMode,
-		logger:             logger,
-		tracer:             tracer,
+		logger:           logger,
+		tracer:           tracer,
 	}, nil
 }
 
@@ -118,9 +118,9 @@ func (l *Loader) LoadTables() error {
 			return fmt.Errorf("get primary key: %w", err)
 		}
 		if len(key) > 0 {
-			l.tablePrimaryKeys[tableName] = key[0]
+			l.tablePrimaryKeys[tableName] = key
 		} else {
-			l.tablePrimaryKeys[tableName] = "id"
+			l.tablePrimaryKeys[tableName] = []string{"id"}
 		}
 	}
 	if !seenCursorTable {
