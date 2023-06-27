@@ -96,6 +96,7 @@ require (
 	github.com/streamingfast/cli v0.0.4-0.20230508203625-ecd532feb120
 	github.com/streamingfast/dbin v0.0.0-20210809205249-73d5eca35dc5 // indirect
 	github.com/streamingfast/dgrpc v0.0.0-20230417152409-2ee737f143dd // indirect
+	github.com/streamingfast/dhammer v0.0.0-20220506192416-3797a7906da2
 	github.com/streamingfast/dmetrics v0.0.0-20230516031116-28fcfeb4b9ed
 	github.com/streamingfast/dstore v0.1.1-0.20230511202333-4f4ccf11a05f // indirect
 	github.com/streamingfast/opaque v0.0.0-20210811180740-0c01d37ea308 // indirect
